@@ -93,47 +93,44 @@
       class="fixed inset-0 bg-gray-100 bg-opacity-50 flex items-center justify-center z-50"
     >
       <div
-        class="overflow-hidden w-full sm:w-[400px] md:w-[500px] bg-white p-4 flex flex-col relative"
+        class="overflow-hidden w-full sm:w-[400px] md:w-[500px] p-4 flex flex-col relative"
       >
         <!-- Cabeçalho do Modal -->
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-xl font-semibold">Capture a Imagem</h2>
-          <button
-            @click="closeCamera"
-            class="absolute top-2 right-2 cursor-pointer"
-          >
+        <div class="flex justify-between items-center mt-4">
+          <!-- Botão para fechar -->
+          <button @click="closeCamera" class="cursor-pointer">
             <IconFechar />
           </button>
 
           <!-- Botão para alternar a câmera -->
-          <div class="mt-4 flex justify-center items-center">
+          <div class="flex items-center">
             <button
               @click="toggleCamera"
-              class="mt-2 bg-gray-100 text-white py-2 px-4 rounded inline-flex justify-center items-center cursor-pointer"
+              class="bg-gray-100 text-white py-2 px-4 rounded inline-flex justify-center items-center cursor-pointer"
             >
-              <IconModoCamera/>
+              <IconModoCamera />
             </button>
           </div>
         </div>
 
         <!-- Video e Imagem Capturada -->
-        <div class="mt-4 flex-1">
+        <div class="flex-1">
           <video
             v-if="!capturedImage"
             ref="videoElement"
-            class="aspect-[4/4] w-full h-auto object-cover"
+            class="aspect-[16/9] w-full h-[88vh] object-cover"
             autoplay
             playsinline
           ></video>
           <img
             v-if="capturedImage"
             :src="capturedImage"
-            class="aspect-[4/3] w-full h-auto object-cover"
+            class="aspect-[16/9] w-full h-[80vh] object-cover"
           />
         </div>
 
         <!-- Botões para capturar, usar ou tirar outra imagem -->
-        <div class="">
+        <div class="mb-4">
           <div v-if="!capturedImage" class="flex justify-center items-center">
             <button
               @click="captureImage"
@@ -236,7 +233,6 @@ const capturedImage = ref(null);
 let mediaStream = null;
 let currentFacingMode = "environment"; // Modo de câmera traseira
 
-
 // Função para alternar entre as câmeras
 const toggleCamera = async () => {
   currentFacingMode = currentFacingMode === "user" ? "environment" : "user"; // Alterna entre 'user' (frontal) e 'environment' (traseira)
@@ -272,10 +268,10 @@ const openCamera = async (alunoId) => {
     currentAlunoId.value = alunoId;
     capturedImage.value = null;
 
-    await nextTick(); 
+    await nextTick();
 
     if (videoElement.value) {
-      videoElement.value.srcObject = mediaStream; 
+      videoElement.value.srcObject = mediaStream;
     }
   } catch (error) {
     console.error("Erro ao acessar a câmera:", error);
@@ -308,7 +304,7 @@ const saveImage = () => {
       (aluno) => aluno.id === currentAlunoId.value
     );
     if (aluno) {
-      aluno.imagemCapturada = true; 
+      aluno.imagemCapturada = true;
     }
 
     Swal.fire({
