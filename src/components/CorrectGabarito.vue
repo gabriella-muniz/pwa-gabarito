@@ -104,6 +104,16 @@
           >
             <IconFechar />
           </button>
+
+          <!-- Botão para alternar a câmera -->
+          <div class="mt-4 flex justify-center items-center">
+            <button
+              @click="toggleCamera"
+              class="mt-2 bg-gray-100 text-white py-2 px-4 rounded inline-flex justify-center items-center cursor-pointer"
+            >
+              Alternar Câmera
+            </button>
+          </div>
         </div>
 
         <!-- Video e Imagem Capturada -->
@@ -165,6 +175,7 @@ import IconAlert from "../components/icons/IconAlert.vue";
 import IconFechar from "../components/icons/IconFechar.vue";
 import Swal from "sweetalert2";
 
+// Define os estados e variáveis do projeto
 const classes = [
   { id: 1, name: "Turma A" },
   { id: 2, name: "Turma B" },
@@ -222,6 +233,13 @@ const videoElement = ref(null);
 const currentAlunoId = ref(null);
 const capturedImage = ref(null);
 let mediaStream = null;
+let currentFacingMode = "user"; // Define o modo de câmera inicial como frontal
+
+// Função para alternar entre as câmeras
+const toggleCamera = async () => {
+  currentFacingMode = currentFacingMode === "user" ? "environment" : "user"; // Alterna entre 'user' (frontal) e 'environment' (traseira)
+  await openCamera(currentAlunoId.value); // Reabre a câmera com o novo modo
+};
 
 // Carregar as imagens do localStorage ao montar o componente
 onMounted(() => {
@@ -239,27 +257,30 @@ const filteredAlunos = computed(() =>
   alunosData.value.filter((aluno) => aluno.turma === selectedClass.value)
 );
 
+// Função para abrir a câmera
 const openCamera = async (alunoId) => {
   try {
     if (mediaStream) {
       mediaStream.getTracks().forEach((track) => track.stop());
     }
-
-    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: currentFacingMode },
+    });
     isCameraOpen.value = true;
     currentAlunoId.value = alunoId;
     capturedImage.value = null;
 
-    await nextTick();
+    await nextTick(); 
 
     if (videoElement.value) {
-      videoElement.value.srcObject = mediaStream;
+      videoElement.value.srcObject = mediaStream; 
     }
   } catch (error) {
     console.error("Erro ao acessar a câmera:", error);
   }
 };
 
+// Função para capturar a imagem
 const captureImage = () => {
   if (!videoElement.value) return;
 
@@ -273,6 +294,7 @@ const captureImage = () => {
   capturedImage.value = canvas.toDataURL("image/png");
 };
 
+// Função para salvar a imagem
 const saveImage = () => {
   if (capturedImage.value && currentAlunoId.value) {
     localStorage.setItem(
@@ -284,7 +306,7 @@ const saveImage = () => {
       (aluno) => aluno.id === currentAlunoId.value
     );
     if (aluno) {
-      aluno.imagemCapturada = true; // Atualiza o estado local
+      aluno.imagemCapturada = true; 
     }
 
     Swal.fire({
@@ -299,6 +321,8 @@ const saveImage = () => {
     closeCamera();
   }
 };
+
+// Função para excluir o aluno
 const deleteAluno = (alunoId) => {
   Swal.fire({
     title: "Tem certeza que quer excluir esse aluno?",
@@ -324,17 +348,21 @@ const deleteAluno = (alunoId) => {
   });
 };
 
+// Função para tirar outra imagem
 const retakeImage = () => {
   capturedImage.value = null;
-  videoElement.value.srcObject = null;
-
+  if (videoElement.value) {
+    videoElement.value.srcObject = null;
+  }
   if (mediaStream) {
     mediaStream.getTracks().forEach((track) => track.stop());
   }
 
+  // Reabra a câmera e reatribua a referência do vídeo
   openCamera(currentAlunoId.value);
 };
 
+// Função para fechar a câmera
 const closeCamera = () => {
   if (mediaStream) mediaStream.getTracks().forEach((track) => track.stop());
   isCameraOpen.value = false;
