@@ -111,7 +111,7 @@
               @click="toggleCamera"
               class="mt-2 bg-gray-100 text-white py-2 px-4 rounded inline-flex justify-center items-center cursor-pointer"
             >
-              Alternar Câmera
+              <IconModoCamera/>
             </button>
           </div>
         </div>
@@ -174,6 +174,7 @@ import IconCheck from "../components/icons/IconCheck.vue";
 import IconAlert from "../components/icons/IconAlert.vue";
 import IconFechar from "../components/icons/IconFechar.vue";
 import Swal from "sweetalert2";
+import IconModoCamera from "./icons/IconModoCamera.vue";
 
 // Define os estados e variáveis do projeto
 const classes = [
@@ -233,7 +234,8 @@ const videoElement = ref(null);
 const currentAlunoId = ref(null);
 const capturedImage = ref(null);
 let mediaStream = null;
-let currentFacingMode = "user"; // Define o modo de câmera inicial como frontal
+let currentFacingMode = "environment"; // Modo de câmera traseira
+
 
 // Função para alternar entre as câmeras
 const toggleCamera = async () => {
