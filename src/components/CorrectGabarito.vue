@@ -118,7 +118,7 @@
           <video
             v-if="!capturedImage"
             ref="videoElement"
-            class="aspect-[16/9] w-full h-[88vh] object-cover"
+            class="aspect-[16/9] w-full h-[85vh] object-cover"
             autoplay
             playsinline
           ></video>
