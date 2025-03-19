@@ -3,155 +3,190 @@
     <!-- Cabeçalho -->
     <div class="mb-6">
       <h1 class="text-3xl font-bold">Correção do Gabarito</h1>
+      <p class="text-gray-400 font-semibold">
+        Envie imagens dos gabaritos dos alunos para correção automatizada
+      </p>
 
       <!-- Seleção de Turma -->
-      <div class="flex items-center space-x-4 mt-4">
-        <div>
-          <label for="class" class="block text-sm font-medium">Turma:</label>
-          <select
-            id="class"
-            v-model="selectedClass"
-            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg"
-          >
-            <option
-              v-for="classOption in classes"
-              :key="classOption.id"
-              :value="classOption.name"
-            >
-              {{ classOption.name }}
-            </option>
-          </select>
-        </div>
+      <div class="flex flex-wrap gap-2 mt-4 bg-gray-100 p-2 rounded-2xl">
+        <button
+          v-for="classOption in classes"
+          :key="classOption.id"
+          :class="{
+            'bg-white text-[#003838]': selectedClass === classOption.name,
+            'bg-gray-100 text-[#003838]': selectedClass !== classOption.name,
+          }"
+          @click="selectedClass = classOption.name"
+          class="px-4 py-2 rounded-lg focus:outline-none cursor-pointer"
+        >
+          {{ classOption.name }}
+        </button>
+      </div>
+
+      <!-- Campo de Busca -->
+      <div class="mt-6 relative">
+        <IconBusca
+          class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+        />
+        <input
+          id="search"
+          v-model="searchTerm"
+          type="text"
+          placeholder="Digite o nome do aluno"
+          class="border border-[#D9D9D9] focus:border-gray-600 outline-none bg-transparent focus:bg-[#f7f7f8] pl-10 py-2 w-full rounded-lg"
+        />
       </div>
     </div>
 
-    <!-- Tabela de Alunos -->
-    <div class="overflow-x-auto w-full">
-      <table class="table-auto w-full text-left">
-        <thead class="text-[#6A7777]">
-          <tr>
-            <th class="px-6 py-4 text-sm font-medium text-left">
-              Nome do Aluno
-            </th>
-            <th class="px-6 py-4 text-sm font-medium text-center">Câmera</th>
-            <th class="px-6 py-4 text-sm font-medium text-center">Checklist</th>
-            <th class="px-6 py-4 text-sm font-medium text-center">Excluir</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="aluno in filteredAlunos"
-            :key="aluno.id"
-            class="border-t border-[#D9D9D9] hover:bg-gray-100 transition"
-          >
-            <!-- Nome do Aluno -->
-            <td
-              class="px-6 py-4 font-medium text-[#003838] text-[14px] uppercase text-left"
+    <!-- Lista de Alunos -->
+    <div
+      class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4"
+    >
+      <div
+        v-for="aluno in filteredAlunosBySearch"
+        :key="aluno.id"
+        class="bg-gray-100 p-4 flex flex-col justify-between"
+      >
+        <div>
+          <div class="flex justify-between items-center">
+            <div
+              class="font-bold text-xs border border-gray-400 rounded-xl p-1"
             >
-              {{ aluno.nome }}
-            </td>
+              {{ aluno.id }}
+            </div>
+            <component
+              :is="aluno.imagemCapturada ? IconCheck : IconAlert"
+              class="text-xl"
+            />
+          </div>
+          <h3 class="mt-2 text-lg font-bold text-[#003838]">
+            {{ aluno.nome }}
+          </h3>
+        </div>
 
-            <!-- Botão da Câmera -->
-            <td class="px-6 py-4 text-center">
-              <button
-                @click="openCamera(aluno.id)"
-                class="text-[#003838] hover:text-[#005151] transition-colors hover:bg-gray-200 p-2 rounded-lg inline-flex items-center justify-center cursor-pointer"
-              >
-                <IconCamera />
-              </button>
-            </td>
+        <div class="flex justify-start mt-6">
+          <button
+            @click="openUploadModal"
+            class="border border-gray-400 text-black py-2 px-4 rounded-lg hover:bg-gray-100 w-fit cursor-pointer font-semibold flex items-center gap-2"
+          >
+            <IconUpload /> Enviar Gabarito
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Modal de Seleção -->
+    <div
+      v-if="isUploadModalOpen"
+      class="fixed inset-0 bg-gray-100 bg-opacity-50 flex items-center justify-center z-50 p-4"
+    >
+      <div
+        class="bg-white w-full max-w-[400px] rounded-lg shadow-lg p-6 relative"
+      >
+        <!-- Cabeçalho -->
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-bold">Enviar Imagem do Gabarito</h2>
+          <button @click="closeUploadModal" class="cursor-pointer">
+            <IconFechar />
+          </button>
+        </div>
 
-            <!-- Checklist -->
-            <td class="px-6 py-4 text-center">
-              <button
-                @click="toggleChecklist(aluno)"
-                class="flex items-center justify-center w-full"
-              >
-                <component
-                  :is="aluno.imagemCapturada ? IconCheck : IconAlert"
-                />
-              </button>
-            </td>
+        <!-- Área de Upload -->
+        <label
+          for="fileInput"
+          class="border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center p-6 cursor-pointer hover:bg-gray-50 transition"
+        >
+          <IconImagem class="text-gray-400 text-4xl" />
+          <p class="text-gray-500 mt-2">Clique para selecionar uma imagem</p>
+          <input
+            type="file"
+            id="fileInput"
+            accept="image/*"
+            @change="handleFileUpload"
+            class="hidden"
+          />
+        </label>
 
-            <!-- Botão de Excluir -->
-            <td class="px-6 py-4 text-center">
-              <button
-                @click="deleteAluno(aluno.id)"
-                class="text-[#003838] hover:text-[#005151] transition-colors hover:bg-gray-200 p-2 rounded-lg inline-flex items-center justify-center cursor-pointer"
-              >
-                <IconLixeira />
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+        <!-- Botões -->
+        <div class="flex justify-between mt-4 space-x-2">
+          <button
+            @click="openFilePicker"
+            class="flex-1 border border-gray-300 rounded-lg py-2 flex items-center justify-center text-gray-600 hover:bg-gray-100"
+          >
+            <IconGaleria class="mr-2" />
+            Galeria
+          </button>
+
+          <button
+            @click="openCameraModal"
+            class="flex-1 border border-gray-300 rounded-lg py-2 flex items-center justify-center text-gray-600 hover:bg-gray-100"
+          >
+            <IconCamera class="mr-2" />
+            Câmera
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Modal Câmera -->
     <div
       v-if="isCameraOpen"
-      class="fixed inset-0 bg-gray-100 bg-opacity-50 flex items-center justify-center z-50"
+      class="fixed inset-0 bg-gray-100 bg-opacity-50 flex items-center justify-center z-50 p-4"
     >
       <div
-        class="overflow-hidden w-full sm:w-[400px] md:w-[500px] p-4 flex flex-col relative"
+        class="bg-white w-full max-w-[500px] rounded-lg shadow-lg p-4 relative"
       >
         <!-- Cabeçalho do Modal -->
-        <div class="flex justify-between items-center mt-4">
-          <!-- Botão para fechar -->
+        <div class="flex justify-between items-center">
           <button @click="closeCamera" class="cursor-pointer">
             <IconFechar />
           </button>
-
-          <!-- Botão para alternar a câmera -->
-          <div class="flex items-center">
-            <button
-              @click="toggleCamera"
-              class="bg-gray-100 text-white py-2 px-4 rounded inline-flex justify-center items-center cursor-pointer"
-            >
-              <IconModoCamera />
-            </button>
-          </div>
+          <button
+            @click="toggleCamera"
+            class="bg-gray-100 text-black py-2 px-4 rounded cursor-pointer"
+          >
+            <IconModoCamera />
+          </button>
         </div>
 
-        <!-- Video e Imagem Capturada -->
+        <!-- Vídeo e Imagem Capturada -->
         <div class="flex-1">
           <video
             v-if="!capturedImage"
             ref="videoElement"
-            class="aspect-[16/9] w-full h-[85vh] object-cover"
+            class="aspect-[16/9] w-full h-[80vh] object-cover"
             autoplay
             playsinline
           ></video>
           <img
             v-if="capturedImage"
             :src="capturedImage"
-            class="aspect-[16/9] w-full h-[80vh] object-cover"
+            class="aspect-[16/9] w-full h-[75vh] object-cover"
           />
         </div>
 
-        <!-- Botões para capturar, usar ou tirar outra imagem -->
-        <div class="mb-4">
-          <div v-if="!capturedImage" class="flex justify-center items-center">
+        <!-- Botões de Captura -->
+        <div class="mt-4 flex flex-col space-y-2">
+          <div v-if="!capturedImage" class="flex justify-center">
             <button
               @click="captureImage"
-              class="mt-2 bg-gray-100 text-white py-2 px-4 rounded inline-flex justify-center items-center cursor-pointer"
+              class="bg-gray-100 text-black py-2 px-4 rounded cursor-pointer"
             >
               <IconCamera class="text-lg" />
             </button>
           </div>
 
-          <div v-else class="mt-4 flex flex-col space-y-2">
+          <div v-else>
             <p class="text-center font-bold">A imagem ficou boa?</p>
             <div class="flex space-x-2 mt-2">
               <button
                 @click="saveImage"
-                class="bg-[#003838] text-white py-2 px-4 rounded w-full cursor-pointer"
+                class="bg-[#003838] text-white py-2 px-4 rounded w-full"
               >
                 Usar esta imagem
               </button>
               <button
                 @click="retakeImage"
-                class="bg-[#fc6e4d] text-white py-2 px-4 rounded w-full cursor-pointer"
+                class="bg-[#fc6e4d] text-white py-2 px-4 rounded w-full"
               >
                 Tirar outra
               </button>
@@ -166,12 +201,13 @@
 <script setup>
 import { ref, computed, nextTick, onBeforeUnmount, onMounted } from "vue";
 import IconCamera from "../components/icons/IconCamera.vue";
-import IconLixeira from "../components/icons/IconLixiera.vue";
 import IconCheck from "../components/icons/IconCheck.vue";
 import IconAlert from "../components/icons/IconAlert.vue";
 import IconFechar from "../components/icons/IconFechar.vue";
 import Swal from "sweetalert2";
 import IconModoCamera from "./icons/IconModoCamera.vue";
+import IconUpload from "./icons/IconUpload.vue";
+import IconBusca from "./icons/IconBusca.vue";
 
 // Define os estados e variáveis do projeto
 const classes = [
@@ -182,7 +218,7 @@ const classes = [
 
 const alunosData = ref([
   {
-    id: 1,
+    id: 133333333333333333,
     nome: "Ana Souza",
     turma: "Turma A",
     checked: false,
@@ -225,6 +261,8 @@ const alunosData = ref([
   },
 ]);
 
+const searchTerm = ref("");
+const stream = ref(null);
 const selectedClass = ref("Turma A");
 const isCameraOpen = ref(false);
 const videoElement = ref(null);
@@ -232,6 +270,48 @@ const currentAlunoId = ref(null);
 const capturedImage = ref(null);
 let mediaStream = null;
 let currentFacingMode = "environment"; // Modo de câmera traseira
+
+const isUploadModalOpen = ref(false);
+
+const selectedFile = ref(null);
+
+const openUploadModal = () => {
+  isUploadModalOpen.value = true;
+};
+
+const closeUploadModal = () => {
+  isUploadModalOpen.value = false;
+};
+
+const openCameraModal = async () => {
+  closeUploadModal(); // Fecha o modal de seleção
+  isCameraOpen.value = true;
+  await startCamera(); // Inicia a câmera assim que o modal abre
+};
+
+const startCamera = async () => {
+  try {
+    // Para garantir que a câmera sempre reinicie corretamente
+    if (stream.value) {
+      stream.value.getTracks().forEach((track) => track.stop());
+    }
+
+    stream.value = await navigator.mediaDevices.getUserMedia({ video: true });
+    if (videoElement.value) {
+      videoElement.value.srcObject = stream.value;
+    }
+  } catch (error) {
+    console.error("Erro ao acessar a câmera:", error);
+  }
+};
+
+const handleFileUpload = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    selectedFile.value = URL.createObjectURL(file);
+    closeUploadModal(); // Fecha o modal de seleção
+  }
+};
 
 // Função para alternar entre as câmeras
 const toggleCamera = async () => {
@@ -250,6 +330,12 @@ onMounted(() => {
     }
   });
 });
+
+const filteredAlunosBySearch = computed(() =>
+  filteredAlunos.value.filter((aluno) =>
+    aluno.nome.toLowerCase().includes(searchTerm.value.toLowerCase())
+  )
+);
 
 const filteredAlunos = computed(() =>
   alunosData.value.filter((aluno) => aluno.turma === selectedClass.value)
@@ -318,32 +404,6 @@ const saveImage = () => {
 
     closeCamera();
   }
-};
-
-// Função para excluir o aluno
-const deleteAluno = (alunoId) => {
-  Swal.fire({
-    title: "Tem certeza que quer excluir esse aluno?",
-    text: "Você não poderá reverter isso!",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#f53d6b",
-    cancelButtonColor: "#e8e8ed",
-    confirmButtonText: "Sim, excluir!",
-  }).then((result) => {
-    if (result.isConfirmed) {
-      // Remove o aluno da lista
-      alunosData.value = alunosData.value.filter(
-        (aluno) => aluno.id !== alunoId
-      );
-
-      Swal.fire({
-        title: "Excluído!",
-        text: "O aluno foi removido com sucesso.",
-        icon: "success",
-      });
-    }
-  });
 };
 
 // Função para tirar outra imagem
