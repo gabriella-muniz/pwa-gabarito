@@ -63,10 +63,14 @@
             {{ aluno.nome }}
           </h3>
         </div>
+        <!-- Mensagem de gabarito processado -->
+        <p v-if="aluno.gabaritoProcessado" class="text-sm text-green-600 mt-2">
+          Gabarito processado com sucesso!
+        </p>
 
         <div class="flex justify-start mt-6">
           <button
-            @click="openUploadModal"
+            @click="openUploadModal(aluno)"
             class="border border-gray-400 text-black py-2 px-4 rounded-lg hover:bg-gray-100 w-fit cursor-pointer font-semibold flex items-center gap-2"
           >
             <IconUpload /> Enviar Gabarito
@@ -74,37 +78,61 @@
         </div>
       </div>
     </div>
-    <!-- Modal de Seleção -->
+    <!-- Modal de Seleção - Só abre se o aluno for selecionado -->
     <div
       v-if="isUploadModalOpen"
-      class="fixed inset-0 bg-gray-100 bg-opacity-50 flex items-center justify-center z-50 p-4"
+      class="fixed inset-0 bg-black/80 bg-opacity-50 flex items-center justify-center z-50 p-4"
     >
       <div
-        class="bg-white w-full max-w-[400px] rounded-lg shadow-lg p-6 relative"
+        class="bg-white w-full max-w-[500px] sm:max-w-[80%] md:max-w-[500px] rounded-lg shadow-lg p-6 relative"
       >
         <!-- Cabeçalho -->
         <div class="flex justify-between items-center mb-4">
-          <h2 class="text-lg font-bold">Enviar Imagem do Gabarito</h2>
+          <h2 class="text-lg font-bold">
+            Gabarito de {{ selectedAluno?.nome }}
+          </h2>
           <button @click="closeUploadModal" class="cursor-pointer">
             <IconFechar />
           </button>
         </div>
 
-        <!-- Área de Upload -->
-        <label
-          for="fileInput"
-          class="border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center p-6 cursor-pointer hover:bg-gray-50 transition"
-        >
-          <IconImagem class="text-gray-400 text-4xl" />
-          <p class="text-gray-500 mt-2">Clique para selecionar uma imagem</p>
-          <input
-            type="file"
-            id="fileInput"
-            accept="image/*"
-            @change="handleFileUpload"
-            class="hidden"
-          />
-        </label>
+        <div v-if="selectedAluno" class="space-y-4">
+          <div class="border border-gray-300 p-4 rounded-lg shadow">
+            <label
+              :for="'fileInput' + selectedAluno.id"
+              class="border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center p-6 cursor-pointer hover:bg-gray-50 transition"
+            >
+              <p class="text-gray-500 mt-2">
+                Clique para selecionar uma imagem
+              </p>
+              <input
+                type="file"
+                :id="'fileInput' + selectedAluno.id"
+                accept="image/*"
+                @change="(event) => handleFileUpload(event, selectedAluno)"
+                class="hidden"
+              />
+            </label>
+
+            <!-- Exibir imagem salva -->
+            <div v-if="selectedAluno.imagemCapturada" class="mt-4">
+              <p class="text-[#003838]">Imagem salva:</p>
+              <img
+                :src="selectedAluno.imagem"
+                alt="Imagem do aluno"
+                class="w-32 h-32 object-cover rounded-lg"
+              />
+
+              <!-- Botão de Finalizar -->
+              <button
+                @click="finalizarProcesso"
+                class="mt-4 bg-[#003838] text-white py-2 px-4 rounded-lg w-full"
+              >
+                Finalizar
+              </button>
+            </div>
+          </div>
+        </div>
 
         <!-- Botões -->
         <div class="flex justify-between mt-4 space-x-2">
@@ -133,7 +161,7 @@
       class="fixed inset-0 bg-gray-100 bg-opacity-50 flex items-center justify-center z-50 p-4"
     >
       <div
-        class="bg-white w-full max-w-[500px] rounded-lg shadow-lg p-4 relative"
+        class="bg-white w-full max-w-[500px] sm:max-w-[80%] md:max-w-[500px] rounded-lg shadow-lg p-4 relative"
       >
         <!-- Cabeçalho do Modal -->
         <div class="flex justify-between items-center">
@@ -149,18 +177,18 @@
         </div>
 
         <!-- Vídeo e Imagem Capturada -->
-        <div class="flex-1">
+        <div class="flex-1 mt-4">
           <video
             v-if="!capturedImage"
             ref="videoElement"
-            class="aspect-[16/9] w-full h-[80vh] object-cover"
+            class="aspect-[16/9] w-full h-[65vh] sm:h-[60vh] md:h-[75vh] object-cover"
             autoplay
             playsinline
           ></video>
           <img
             v-if="capturedImage"
             :src="capturedImage"
-            class="aspect-[16/9] w-full h-[75vh] object-cover"
+            class="aspect-[16/9] w-full h-[65vh] sm:h-[60vh] md:h-[75vh] object-cover"
           />
         </div>
 
@@ -169,7 +197,7 @@
           <div v-if="!capturedImage" class="flex justify-center">
             <button
               @click="captureImage"
-              class="bg-gray-100 text-black py-2 px-4 rounded cursor-pointer"
+              class="bg-gray-100 text-black py-2 px-4 rounded cursor-pointer w-full flex items-center justify-center"
             >
               <IconCamera class="text-lg" />
             </button>
@@ -179,7 +207,7 @@
             <p class="text-center font-bold">A imagem ficou boa?</p>
             <div class="flex space-x-2 mt-2">
               <button
-                @click="saveImage"
+                @click="saveImage(currentAlunoId)"
                 class="bg-[#003838] text-white py-2 px-4 rounded w-full"
               >
                 Usar esta imagem
@@ -204,10 +232,12 @@ import IconCamera from "../components/icons/IconCamera.vue";
 import IconCheck from "../components/icons/IconCheck.vue";
 import IconAlert from "../components/icons/IconAlert.vue";
 import IconFechar from "../components/icons/IconFechar.vue";
-import Swal from "sweetalert2";
 import IconModoCamera from "./icons/IconModoCamera.vue";
 import IconUpload from "./icons/IconUpload.vue";
 import IconBusca from "./icons/IconBusca.vue";
+import IconGaleria from "./icons/IconGaleria.vue";
+import { toast } from "vue3-toastify";
+import "vue3-toastify/dist/index.css";
 
 // Define os estados e variáveis do projeto
 const classes = [
@@ -223,6 +253,8 @@ const alunosData = ref([
     turma: "Turma A",
     checked: false,
     imagemCapturada: false,
+    imagem: null,
+    gabaritoProcessado: false,
   },
   {
     id: 2,
@@ -230,6 +262,8 @@ const alunosData = ref([
     turma: "Turma A",
     checked: false,
     imagemCapturada: false,
+    imagem: null,
+    gabaritoProcessado: false,
   },
   {
     id: 3,
@@ -237,6 +271,7 @@ const alunosData = ref([
     turma: "Turma B",
     checked: false,
     imagemCapturada: false,
+    imagem: null,
   },
   {
     id: 4,
@@ -244,6 +279,7 @@ const alunosData = ref([
     turma: "Turma C",
     checked: false,
     imagemCapturada: false,
+    imagem: null,
   },
   {
     id: 5,
@@ -251,6 +287,7 @@ const alunosData = ref([
     turma: "Turma B",
     checked: false,
     imagemCapturada: false,
+    imagem: null,
   },
   {
     id: 6,
@@ -258,6 +295,7 @@ const alunosData = ref([
     turma: "Turma C",
     checked: false,
     imagemCapturada: false,
+    imagem: null,
   },
 ]);
 
@@ -269,24 +307,57 @@ const videoElement = ref(null);
 const currentAlunoId = ref(null);
 const capturedImage = ref(null);
 let mediaStream = null;
-let currentFacingMode = "environment"; // Modo de câmera traseira
+let currentFacingMode = "environment";
+const selectedAluno = ref(null);
 
 const isUploadModalOpen = ref(false);
 
-const selectedFile = ref(null);
+const finalizarProcesso = (aluno) => {
+  // Verifica se a tela tem menos de 768px (ajuste conforme necessário)
+  const isMobile = window.innerWidth < 768;
 
-const openUploadModal = () => {
-  isUploadModalOpen.value = true;
-};
+  toast.success("Gabarito Processado com Sucesso!", {
+    position: isMobile ? "top-center" : "bottom-right",
+    autoClose: 3000,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+  });
 
-const closeUploadModal = () => {
+  // Marca o gabarito como processado
+  aluno.gabaritoProcessado = true;
+
+  // Fechar modal
   isUploadModalOpen.value = false;
 };
 
+// Função para selecionar um aluno
+const selectAluno = (aluno) => {
+  selectedAluno.value = aluno;
+  console.log("Aluno selecionado:", selectedAluno.value); // Debug
+};
+
+// Função para abrir o modal para o aluno específico
+const openUploadModal = (aluno) => {
+  selectedAluno.value = aluno;
+  isUploadModalOpen.value = true;
+};
+
+// Função para fechar o modal
+const closeUploadModal = () => {
+  isUploadModalOpen.value = false;
+  selectedAluno.value = null;
+};
+
+// Função openCameraModal onde aluno é passado
 const openCameraModal = async () => {
-  closeUploadModal(); // Fecha o modal de seleção
   isCameraOpen.value = true;
-  await startCamera(); // Inicia a câmera assim que o modal abre
+  capturedImage.value = null;
+  currentAlunoId.value = selectedAluno.value.id;
+
+  // Espera pela inicialização da câmera
+  await startCamera();
 };
 
 const startCamera = async () => {
@@ -305,11 +376,22 @@ const startCamera = async () => {
   }
 };
 
+// Função para manipular o upload de arquivo e salvar no localStorage
 const handleFileUpload = (event) => {
   const file = event.target.files[0];
   if (file) {
-    selectedFile.value = URL.createObjectURL(file);
-    closeUploadModal(); // Fecha o modal de seleção
+    const reader = new FileReader();
+    reader.onload = () => {
+      selectedAluno.value.imagem = reader.result;
+      selectedAluno.value.imagemCapturada = true;
+
+      // Salvar a imagem no localStorage com a chave específica do aluno
+      localStorage.setItem(
+        `aluno_${selectedAluno.value.id}_imagem`,
+        reader.result
+      );
+    };
+    reader.readAsDataURL(file);
   }
 };
 
@@ -319,14 +401,13 @@ const toggleCamera = async () => {
   await openCamera(currentAlunoId.value); // Reabre a câmera com o novo modo
 };
 
-// Carregar as imagens do localStorage ao montar o componente
+// Carregar imagens salvas no LocalStorage ao montar o componente
 onMounted(() => {
   alunosData.value.forEach((aluno) => {
     const imagem = localStorage.getItem(`aluno_${aluno.id}_imagem`);
     if (imagem) {
+      aluno.imagem = imagem;
       aluno.imagemCapturada = true;
-    } else {
-      aluno.imagemCapturada = false;
     }
   });
 });
@@ -377,32 +458,27 @@ const captureImage = () => {
 
   capturedImage.value = canvas.toDataURL("image/png");
 };
+const saveImage = (alunoId) => {
+  console.log("Captured Image:", capturedImage.value); // Verifique se a imagem foi capturada
+  console.log("Current Aluno ID:", alunoId); // Verifique o ID do aluno
 
-// Função para salvar a imagem
-const saveImage = () => {
-  if (capturedImage.value && currentAlunoId.value) {
-    localStorage.setItem(
-      `aluno_${currentAlunoId.value}_imagem`,
-      capturedImage.value
-    );
+  if (capturedImage.value && alunoId) {
+    // Salva a imagem no localStorage do aluno específico
+    localStorage.setItem(`aluno_${alunoId}_imagem`, capturedImage.value);
 
-    const aluno = alunosData.value.find(
-      (aluno) => aluno.id === currentAlunoId.value
-    );
+    // Atualiza os dados do aluno no estado
+    const aluno = alunosData.value.find((aluno) => aluno.id === alunoId);
     if (aluno) {
       aluno.imagemCapturada = true;
+      aluno.imagem = capturedImage.value; // Atribuindo a imagem capturada ao aluno
     }
 
-    Swal.fire({
-      title: "Imagem salva!",
-      text: "A imagem foi salva com sucesso.",
-      icon: "success",
-      confirmButtonText: "OK",
-      timer: 2000,
-      timerProgressBar: true,
-    });
-
+    // Fechar a câmera após salvar a imagem
     closeCamera();
+  } else {
+    console.error(
+      "Erro: Nenhuma imagem foi capturada ou o aluno não foi selecionado."
+    );
   }
 };
 
