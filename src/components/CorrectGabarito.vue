@@ -113,6 +113,7 @@
                 accept="image/*"
                 @change="(event) => handleFileUpload(event, selectedAluno)"
                 class="hidden"
+                ref="fileInput"
               />
             </label>
 
@@ -343,10 +344,18 @@ const videoElement = ref(null);
 const currentAlunoId = ref(null);
 const capturedImage = ref(null);
 let mediaStream = null;
-let currentFacingMode = "environment";
+const currentFacingMode = ref("environment"); // Inicia na câmera traseira
 const selectedAluno = ref(null);
 const isUploadModalOpen = ref(false);
 const isTurmaConfirmed = ref(false);
+
+const fileInput = ref(null);
+
+const openFilePicker = () => {
+  if (fileInput.value) {
+    fileInput.value.click(); // Dispara o clique no input
+  }
+};
 
 // Verifica se todos os alunos da turma selecionada têm imagem processada
 const isConfirmButtonEnabled = computed(() => {
@@ -480,8 +489,9 @@ const handleFileUpload = (event) => {
 
 // Função para alternar entre as câmeras
 const toggleCamera = async () => {
-  currentFacingMode = currentFacingMode === "user" ? "environment" : "user"; // Alterna entre 'user' (frontal) e 'environment' (traseira)
-  await openCamera(currentAlunoId.value); // Reabre a câmera com o novo modo
+  currentFacingMode.value =
+    currentFacingMode.value === "user" ? "environment" : "user"; // Alterna entre frontal e traseira
+  await openCamera(currentAlunoId.value);
 };
 
 // Carregar imagens salvas no LocalStorage ao montar o componente
@@ -508,20 +518,24 @@ const filteredAlunos = computed(() =>
 // Função para abrir a câmera
 const openCamera = async (alunoId) => {
   try {
-    if (mediaStream) {
-      mediaStream.getTracks().forEach((track) => track.stop());
+    // Se já houver um stream ativo, pará-lo
+    if (mediaStream.value) {
+      mediaStream.value.getTracks().forEach((track) => track.stop());
     }
-    mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: currentFacingMode },
+
+    // Solicita acesso à câmera com o facingMode atual (traseira por padrão)
+    mediaStream.value = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: currentFacingMode.value },
     });
+
     isCameraOpen.value = true;
     currentAlunoId.value = alunoId;
     capturedImage.value = null;
 
-    await nextTick();
+    await nextTick(); // Aguarda o DOM atualizar
 
     if (videoElement.value) {
-      videoElement.value.srcObject = mediaStream;
+      videoElement.value.srcObject = mediaStream.value;
     }
   } catch (error) {
     console.error("Erro ao acessar a câmera:", error);
@@ -541,6 +555,7 @@ const captureImage = () => {
 
   capturedImage.value = canvas.toDataURL("image/png");
 };
+
 const saveImage = (alunoId) => {
   console.log("Captured Image:", capturedImage.value); // Verifique se a imagem foi capturada
   console.log("Current Aluno ID:", alunoId); // Verifique o ID do aluno
