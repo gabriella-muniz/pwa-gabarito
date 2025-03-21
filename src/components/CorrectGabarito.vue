@@ -344,7 +344,7 @@ const videoElement = ref(null);
 const currentAlunoId = ref(null);
 const capturedImage = ref(null);
 let mediaStream = null;
-const currentFacingMode = ref("environment"); // Inicia na câmera traseira
+let currentFacingMode = ref("environment"); // Inicia na câmera traseira
 const selectedAluno = ref(null);
 const isUploadModalOpen = ref(false);
 const isTurmaConfirmed = ref(false);
@@ -489,11 +489,9 @@ const handleFileUpload = (event) => {
 
 // Função para alternar entre as câmeras
 const toggleCamera = async () => {
-  currentFacingMode.value =
-    currentFacingMode.value === "user" ? "environment" : "user"; // Alterna entre frontal e traseira
-  await openCamera(currentAlunoId.value);
+  currentFacingMode = currentFacingMode === "user" ? "environment" : "user"; // Alterna entre 'user' (frontal) e 'environment' (traseira)
+  await openCamera(currentAlunoId.value); // Reabre a câmera com o novo modo
 };
-
 // Carregar imagens salvas no LocalStorage ao montar o componente
 onMounted(() => {
   alunosData.value.forEach((aluno) => {
@@ -518,30 +516,25 @@ const filteredAlunos = computed(() =>
 // Função para abrir a câmera
 const openCamera = async (alunoId) => {
   try {
-    // Se já houver um stream ativo, pará-lo
-    if (mediaStream.value) {
-      mediaStream.value.getTracks().forEach((track) => track.stop());
+    if (mediaStream) {
+      mediaStream.getTracks().forEach((track) => track.stop());
     }
-
-    // Solicita acesso à câmera com o facingMode atual (traseira por padrão)
-    mediaStream.value = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: currentFacingMode.value },
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: currentFacingMode },
     });
-
     isCameraOpen.value = true;
     currentAlunoId.value = alunoId;
     capturedImage.value = null;
 
-    await nextTick(); // Aguarda o DOM atualizar
+    await nextTick(); 
 
     if (videoElement.value) {
-      videoElement.value.srcObject = mediaStream.value;
+      videoElement.value.srcObject = mediaStream; 
     }
   } catch (error) {
     console.error("Erro ao acessar a câmera:", error);
   }
 };
-
 // Função para capturar a imagem
 const captureImage = () => {
   if (!videoElement.value) return;
