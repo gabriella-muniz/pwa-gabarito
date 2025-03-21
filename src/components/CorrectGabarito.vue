@@ -62,11 +62,12 @@
           <h3 class="mt-2 text-lg font-bold text-[#003838]">
             {{ aluno.nome }}
           </h3>
+
+          <!-- Mensagem de sucesso quando o gabarito for processado -->
+          <p v-if="aluno.imagemCapturada" class="text-sm text-green-600 mt-2">
+            Gabarito processado com sucesso!
+          </p>
         </div>
-        <!-- Mensagem de gabarito processado -->
-        <p v-if="aluno.gabaritoProcessado" class="text-sm text-green-600 mt-2">
-          Gabarito processado com sucesso!
-        </p>
 
         <div class="flex justify-start mt-6">
           <button
@@ -78,6 +79,7 @@
         </div>
       </div>
     </div>
+
     <!-- Modal de Seleção - Só abre se o aluno for selecionado -->
     <div
       v-if="isUploadModalOpen"
@@ -223,6 +225,37 @@
         </div>
       </div>
     </div>
+
+    <!-- Botão de Confirmar Turma -->
+    <div class="relative flex flex-col justify-end items-center">
+      <button
+        @click="confirmarTurma"
+        :disabled="!isConfirmButtonEnabled"
+        class="px-4 py-2 rounded-lg text-white font-bold transition duration-200 flex items-center gap-2 relative cursor-pointer"
+        :class="
+          isTurmaConfirmed
+            ? 'bg-green-500'
+            : isConfirmButtonEnabled
+            ? 'bg-green-500 hover:bg-green-600'
+            : 'bg-gray-400 cursor-not-allowed'
+        "
+      >
+        <!-- Ícone de status -->
+        <span
+          v-if="turmaStatusIcon"
+          class="absolute top-0 right-0 -translate-y-2 translate-x-2 text-xl"
+        >
+          <component :is="turmaStatusIcon" />
+        </span>
+        <!-- Texto do botão -->
+        <span v-if="isTurmaConfirmed" class="flex items-center gap-2">
+          <IconCheckConfirm /> Turma Confirmada</span
+        >
+        <span v-else class="flex items-center gap-2">
+          <IconCheckConfirm /> Confirmar Turma
+        </span>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -236,8 +269,12 @@ import IconModoCamera from "./icons/IconModoCamera.vue";
 import IconUpload from "./icons/IconUpload.vue";
 import IconBusca from "./icons/IconBusca.vue";
 import IconGaleria from "./icons/IconGaleria.vue";
+import IconAlertConfirm from "./icons/IconAlertConfirm.vue";
+
 import { toast } from "vue3-toastify";
 import "vue3-toastify/dist/index.css";
+
+import IconCheckConfirm from "./icons/IconCheckConfirm.vue";
 
 // Define os estados e variáveis do projeto
 const classes = [
@@ -254,8 +291,8 @@ const alunosData = ref([
     checked: false,
     imagemCapturada: false,
     imagem: null,
-    gabaritoProcessado: false,
   },
+
   {
     id: 2,
     nome: "Carlos Oliveira",
@@ -263,7 +300,6 @@ const alunosData = ref([
     checked: false,
     imagemCapturada: false,
     imagem: null,
-    gabaritoProcessado: false,
   },
   {
     id: 3,
@@ -309,11 +345,60 @@ const capturedImage = ref(null);
 let mediaStream = null;
 let currentFacingMode = "environment";
 const selectedAluno = ref(null);
-
 const isUploadModalOpen = ref(false);
+const isTurmaConfirmed = ref(false);
+
+// Verifica se todos os alunos da turma selecionada têm imagem processada
+const isConfirmButtonEnabled = computed(() => {
+  const alunosDaTurma = alunosData.value.filter(
+    (aluno) => aluno.turma === selectedClass.value
+  );
+  return (
+    !isTurmaConfirmed.value &&
+    alunosDaTurma.length > 0 &&
+    alunosDaTurma.every((aluno) => aluno.imagemCapturada || aluno.imagem)
+  );
+});
+
+// Define o ícone de status da turma
+const turmaStatusIcon = computed(() => {
+  const alunosDaTurma = alunosData.value.filter(
+    (aluno) => aluno.turma === selectedClass.value
+  );
+
+  // Verifica se todos os alunos têm o gabarito processado
+  const todosAlunosConfirmados = alunosDaTurma.every(
+    (aluno) => aluno.imagemCapturada || aluno.imagem
+  );
+  if (todosAlunosConfirmados && isTurmaConfirmed.value) {
+    return IconCheck;
+  }
+  if (!todosAlunosConfirmados) {
+    return IconAlertConfirm;
+  }
+  return null;
+});
+
+// Função para confirmar turma
+const confirmarTurma = () => {
+  if (isConfirmButtonEnabled.value) {
+    isTurmaConfirmed.value = true;
+
+    // Exibir o toast de sucesso após confirmar a turma
+    const isMobile = window.innerWidth < 768;
+
+    toast.success("Turma confirmada!", {
+      position: isMobile ? "top-center" : "bottom-right",
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+    });
+  }
+};
 
 const finalizarProcesso = (aluno) => {
-  // Verifica se a tela tem menos de 768px (ajuste conforme necessário)
   const isMobile = window.innerWidth < 768;
 
   toast.success("Gabarito Processado com Sucesso!", {
@@ -325,10 +410,8 @@ const finalizarProcesso = (aluno) => {
     draggable: true,
   });
 
-  // Marca o gabarito como processado
   aluno.gabaritoProcessado = true;
 
-  // Fechar modal
   isUploadModalOpen.value = false;
 };
 
